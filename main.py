@@ -1,8 +1,6 @@
+import os
 import discord
 from discord.ext import commands
-import re
-from flask import Flask
-import threading
 
 TOKEN = os.getenv("DISCORD_TOKEN")  # Loaded from environment variable (Render will inject this)
 VERIFICATION_CHANNEL_ID = 1362951881827160295  # Verification channel ID
@@ -33,7 +31,6 @@ class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
         embed.add_field(name="User", value=interaction.user.mention, inline=False)
         embed.add_field(name="Email", value=self.email.value, inline=False)
         embed.add_field(name="IGN", value=self.ign.value, inline=False)
-
         embed.set_footer(text="This is an automated message.")
 
         await log_channel.send(embed=embed)
@@ -57,7 +54,7 @@ async def on_ready():
     except Exception as e:
         print(f"Error syncing commands: {e}")
 
-    # Ensure the /setup embed with the button is sent to the verification channel after bot restarts
+    # Auto-send embed to verification channel
     verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
     embed = discord.Embed(
         title="🔗 Link Your Minecraft Account",
@@ -65,30 +62,16 @@ async def on_ready():
         color=discord.Color.green()
     )
     embed.set_footer(text="This is an automated message.")
-    await verification_channel.send(embed=embed, view=LinkView())  # Attach the view with the button
+    await verification_channel.send(embed=embed, view=LinkView())
 
 @bot.tree.command(name="setup", description="Start the Minecraft account verification process")
 async def setup(interaction: discord.Interaction):
-    verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
     embed = discord.Embed(
         title="🔗 Link Your Minecraft Account",
         description="Click the **Link Account** button below to start verification.",
         color=discord.Color.green()
     )
     embed.set_footer(text="This is an automated message.")
-    await interaction.response.send_message(embed=embed, view=LinkView())  # Send the embed and the button to the verification channel
-
-# Create Flask app to respond to UptimeRobot's pings
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "Bot is online!"
-
-def run_flask():
-    app.run(host="0.0.0.0", port=8080)  # Expose server on port 8080
-
-# Run Flask in a separate thread
-threading.Thread(target=run_flask).start()
+    await interaction.response.send_message(embed=embed, view=LinkView())
 
 bot.run(TOKEN)
