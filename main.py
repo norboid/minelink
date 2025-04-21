@@ -14,6 +14,9 @@ intents.dm_messages = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
+# To track if the bot has already sent the verification DM to the user
+sent_verification_dms = {}
+
 class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
     email = discord.ui.TextInput(label="Minecraft Email", placeholder="example@gmail.com", required=True)
     ign = discord.ui.TextInput(label="Minecraft IGN", placeholder="YourInGameName", required=True)
@@ -53,48 +56,58 @@ async def on_ready():
 
     verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
 
-    async for message in verification_channel.history(limit=50):
-        if message.author == bot.user and message.embeds:
-            if message.embeds[0].title == "🔗 Link Your Minecraft Account":
-                await message.delete()
+    # Only send verification prompt if it hasn't been sent before
+    if not sent_verification_dms.get("verification_message_sent", False):
+        embed = discord.Embed(
+            title="🔗 Link Your Minecraft Account",
+            description="Click the **Link Account** button below to start verification.",
+            color=discord.Color.green()
+        )
+        embed.set_footer(text="This is an automated message.")
+        await verification_channel.send(embed=embed, view=LinkView())
 
-    embed = discord.Embed(
-        title="🔗 Link Your Minecraft Account",
-        description="Click the **Link Account** button below to start verification.",
-        color=discord.Color.green()
-    )
-    embed.set_footer(text="This is an automated message.")
-    await verification_channel.send(embed=embed, view=LinkView())
+        # Mark as sent to avoid duplicate messages
+        sent_verification_dms["verification_message_sent"] = True
 
 @bot.tree.command(name="setup", description="Start the Minecraft account verification process")
 async def setup(interaction: discord.Interaction):
     verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
 
-    async for message in verification_channel.history(limit=50):
-        if message.author == bot.user and message.embeds:
-            if message.embeds[0].title == "🔗 Link Your Minecraft Account":
-                await message.delete()
+    # Only send verification prompt if it hasn't been sent before
+    if not sent_verification_dms.get("verification_message_sent", False):
+        embed = discord.Embed(
+            title="🔗 Link Your Minecraft Account",
+            description="Click the **Link Account** button below to start verification.",
+            color=discord.Color.green()
+        )
+        embed.set_footer(text="This is an automated message.")
+        await verification_channel.send(embed=embed, view=LinkView())
 
-    embed = discord.Embed(
-        title="🔗 Link Your Minecraft Account",
-        description="Click the **Link Account** button below to start verification.",
-        color=discord.Color.green()
-    )
-    embed.set_footer(text="This is an automated message.")
-    await verification_channel.send(embed=embed, view=LinkView())
+        # Mark as sent to avoid duplicate messages
+        sent_verification_dms["verification_message_sent"] = True
+
     await interaction.response.send_message("✅ Sent verification prompt to the channel.", ephemeral=False)
 
 @bot.tree.command(name="promptcode", description="Prompt a user to submit a 6-digit code via DM")
 async def promptcode(interaction: discord.Interaction, user: discord.Member):
     try:
-        embed = discord.Embed(
-            title="📨 Minecraft Server Verification",
-            description="We've sent a 6-digit code to your email address linked to your Minecraft account.\nPlease reply to this DM with the code to complete your verification.\n\n🔒 Your information will remain private. If you have any questions, feel free to ask staff!\nThis is an automated message.",
-            color=discord.Color.blue()
-        )
-        embed.set_footer(text="Do not share this code with anyone.")
-        await user.send(embed=embed)
-        await interaction.response.send_message(f"✅ Prompt sent to {user.mention}'s DMs!")  
+        # Check if the verification message has been sent already
+        if user.id not in sent_verification_dms:
+            # Send verification DM if not sent before
+            embed = discord.Embed(
+                title="📨 Minecraft Server Verification",
+                description="We've sent a 6-digit code to your email address linked to your Minecraft account.\nPlease reply to this DM with the code to complete your verification.\n\n🔒 Your information will remain private. If you have any questions, feel free to ask staff!\nThis is an automated message.",
+                color=discord.Color.blue()
+            )
+            embed.set_footer(text="Do not share this code with anyone.")
+            await user.send(embed=embed)
+            
+            # Mark as sent
+            sent_verification_dms[user.id] = True
+        else:
+            await interaction.response.send_message(f"❌ Verification already sent to {user.mention}'s DMs.", ephemeral=True)
+
+        await interaction.response.send_message(f"✅ Prompt sent to {user.mention}'s DMs!")
     except discord.Forbidden:
         await interaction.response.send_message(f"❌ Couldn't DM {user.mention}.")
 
