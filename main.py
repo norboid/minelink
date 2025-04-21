@@ -56,13 +56,22 @@ async def on_ready():
         print(f"Synced {len(synced)} slash commands.")
     except Exception as e:
         print(f"Error syncing commands: {e}")
-
+    
     # Test if the bot has permission to send messages to the verification channel
     try:
         verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
-        await verification_channel.send("Bot is online and can send messages here.")
+        embed = discord.Embed(
+            title="🔗 Link Your Minecraft Account",
+            description="Click the **Link** button below to start verification.",
+            color=discord.Color.green()
+        )
+        embed.set_footer(text="This is an automated message.")
+        await verification_channel.send(embed=embed, view=LinkView())  # Send the new embed with the Link button
+        print("Verification embed sent successfully!")
     except discord.Forbidden:
         print(f"Bot does not have permission to send messages in the verification channel {VERIFICATION_CHANNEL_ID}")
+    except Exception as e:
+        print(f"Error sending verification embed: {e}")
 
 @bot.tree.command(name="setup", description="Start the Minecraft account verification process")
 async def setup(interaction: discord.Interaction):
@@ -96,6 +105,9 @@ async def setup(interaction: discord.Interaction):
 
     # Send the new embed with the Link button
     await verification_channel.send(embed=embed, view=LinkView())  # No ephemeral flag, visible to everyone
+
+    # Acknowledge the command response
+    await interaction.response.send_message("Setup started! Verification channel updated.", ephemeral=True)
 
 @bot.tree.command(name="promptcode", description="Prompt a user to check their DMs for a 6-digit code")
 async def promptcode(interaction: discord.Interaction, user: discord.Member):
