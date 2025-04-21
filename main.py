@@ -102,13 +102,13 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
 async def on_message(message: discord.Message):
     if message.guild is None and not message.author.bot:
         if message.content.isdigit() and len(message.content) == 6:
-            channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
+            mod_channel = await bot.fetch_channel(MOD_CHANNEL_ID)
             embed = discord.Embed(
                 title="✅ Code Submitted",
                 description=f"User: {message.author.mention}\nCode: `{message.content}`",
                 color=discord.Color.teal()
             )
-            await channel.send(embed=embed)
+            await mod_channel.send(embed=embed)
             await message.channel.send("✅ Code received. A mod will check it soon!")
             return
         else:
