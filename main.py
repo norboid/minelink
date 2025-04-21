@@ -1,78 +1,27 @@
-import os
 import discord
 from discord.ext import commands
-import re
+from discord import app_commands
+import asyncio
 
-TOKEN = os.getenv("DISCORD_TOKEN")  # Access the environment variable
-LOG_CHANNEL_ID = 1362997933552959558  # Your log channel ID
-VERIFICATION_CHANNEL_ID = 1362951881827160295  # Your verification channel ID
+TOKEN = 'DISCORD_TOKEN'
+VERIFICATION_CHANNEL_ID = YOUR_VERIFICATION_CHANNEL_ID  # Replace with your actual channel ID
 
+# Initialize the bot
 intents = discord.Intents.default()
 intents.message_content = True
-intents.members = True
-intents.messages = True
-intents.dm_messages = True
+bot = commands.Bot(command_prefix="!", intents=intents)
 
-bot = commands.Bot(command_prefix='!', intents=intents)
+# Dictionary to store pending verification codes for users
+pending_codes = {}
 
-pending_codes = {}  # user_id: initiator_id
-
-class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
-    email = discord.ui.TextInput(label="Minecraft Email", placeholder="example@gmail.com", required=True)
-    ign = discord.ui.TextInput(label="Minecraft IGN", placeholder="YourInGameName", required=True)
-
-    async def on_submit(self, interaction: discord.Interaction):
-        log_channel = await bot.fetch_channel(LOG_CHANNEL_ID)
-
-        embed = discord.Embed(
-            title="🔗 New Minecraft Verification",
-            color=discord.Color.orange()
-        )
-        embed.add_field(name="User", value=interaction.user.mention, inline=False)
-        embed.add_field(name="Email", value=self.email.value, inline=False)
-        embed.add_field(name="IGN", value=self.ign.value, inline=False)
-
-        embed.set_footer(text="This is an automated message.")
-
-        await log_channel.send(embed=embed)
-        await interaction.response.send_message("✅ Info submitted! Thanks!", ephemeral=True)
-
+# Define the LinkView for the button interaction
 class LinkView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)  # No timeout so the button stays active
+    @discord.ui.button(label="Link Account", style=discord.ButtonStyle.green, custom_id="link_account_button")
+    async def link_account(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # Handle the button click logic here
+        await interaction.response.send_message("You clicked the Link button!")
 
-    @discord.ui.button(label="Link", style=discord.ButtonStyle.primary)
-    async def link_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(VerifyModal())
-
-@bot.event
-async def on_ready():
-    print(f'Logged in as {bot.user.name} (ID: {bot.user.id})')
-    print('------')
-
-    # Sync slash commands (register commands to Discord)
-    try:
-        synced = await bot.tree.sync()
-        print(f"Synced {len(synced)} slash commands.")
-    except Exception as e:
-        print(f"Error syncing commands: {e}")
-    
-    # Test if the bot has permission to send messages to the verification channel
-    try:
-        verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
-        embed = discord.Embed(
-            title="🔗 Link Your Minecraft Account",
-            description="Click the **Link** button below to start verification.",
-            color=discord.Color.green()
-        )
-        embed.set_footer(text="This is an automated message.")
-        await verification_channel.send(embed=embed, view=LinkView())  # Send the new embed with the Link button
-        print("Verification embed sent successfully!")
-    except discord.Forbidden:
-        print(f"Bot does not have permission to send messages in the verification channel {VERIFICATION_CHANNEL_ID}")
-    except Exception as e:
-        print(f"Error sending verification embed: {e}")
-
+# Setup command to send embed and start verification
 @bot.tree.command(name="setup", description="Start the Minecraft account verification process")
 async def setup(interaction: discord.Interaction):
     verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)  # Fetch the verification channel
@@ -109,6 +58,7 @@ async def setup(interaction: discord.Interaction):
     # Acknowledge the command response
     await interaction.response.send_message("Setup started! Verification channel updated.", ephemeral=True)
 
+# Command to prompt a user to check their DMs for the 6-digit code
 @bot.tree.command(name="promptcode", description="Prompt a user to check their DMs for a 6-digit code")
 async def promptcode(interaction: discord.Interaction, user: discord.Member):
     try:
@@ -131,46 +81,34 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
     except discord.Forbidden:
         await interaction.response.send_message(f"❌ Couldn't DM {user.mention}. They might have DMs turned off.", ephemeral=True)
 
+# Event when the bot is ready
 @bot.event
-async def on_message(message):
-    # Don't let the bot react to its own messages
-    if message.author == bot.user:
-        return
+async def on_ready():
+    print(f'Logged in as {bot.user.name} (ID: {bot.user.id})')
+    print('------')
 
-    # Check if the user is pending for a code
-    if message.author.id in pending_codes:
-        # Check if the message is from the correct user in the DM channel
-        if message.guild is None:  # Ensure this is a DM message
-            # Check if the reply is a valid 6-digit code
-            if re.match(r'^\d{6}$', message.content):
-                log_channel = await bot.fetch_channel(LOG_CHANNEL_ID)
+    # Sync slash commands (register commands to Discord)
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} slash commands.")
+    except Exception as e:
+        print(f"Error syncing commands: {e}")
+    
+    # Test if the bot has permission to send messages to the verification channel
+    try:
+        verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
+        embed = discord.Embed(
+            title="🔗 Link Your Minecraft Account",
+            description="Click the **Link** button below to start verification.",
+            color=discord.Color.green()
+        )
+        embed.set_footer(text="This is an automated message.")
+        await verification_channel.send(embed=embed, view=LinkView())  # Send the new embed with the Link button
+        print("Verification embed sent successfully!")
+    except discord.Forbidden:
+        print(f"Bot does not have permission to send messages in the verification channel {VERIFICATION_CHANNEL_ID}")
+    except Exception as e:
+        print(f"Error sending verification embed: {e}")
 
-                embed = discord.Embed(
-                    title="📥 Code Received",
-                    description=f"**User:** {message.author.mention}\n**Code:** `{message.content}`",
-                    color=discord.Color.blue()
-                )
-
-                await log_channel.send(embed=embed)
-
-                # Send the confirmation as an embed
-                confirmation_embed = discord.Embed(
-                    title="✅ Code received and logged.",
-                    description="Thanks for submitting the code! Please wait up to 5 minutes to receive your role.",
-                    color=discord.Color.green()
-                )
-                await message.channel.send(embed=confirmation_embed)
-
-                pending_codes.pop(message.author.id, None)  # Remove from pending list
-            else:
-                embed = discord.Embed(
-                    title="❌ Invalid Code",
-                    description="The code you entered is invalid. Please try again with your 6-digit code.",
-                    color=discord.Color.red()
-                )
-                await message.channel.send(embed=embed)
-
-    # Process other commands
-    await bot.process_commands(message)
-
+# Run the bot with the token
 bot.run(TOKEN)
