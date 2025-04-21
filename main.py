@@ -154,7 +154,7 @@ async def on_message(message: discord.Message):
                 sent_invalid_codes.remove(message.author.id)
 
         else:
-            # Avoid sending the invalid code embed twice
+            # Avoid sending the invalid code embed twice by checking if the user is in the invalid codes set
             if message.author.id not in sent_invalid_codes:
                 embed = discord.Embed(
                     title="❌ Invalid Code",
