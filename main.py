@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 import re
 
-TOKEN = 'DISCORD_TOKEN'  # Replace with your actual bot token securely
+TOKEN = os.getenv("DISCORD_TOKEN")  # Access the environment variable
 LOG_CHANNEL_ID = 1362997933552959558  # Your log channel ID
 VERIFICATION_CHANNEL_ID = 1362951881827160295  # Your verification channel ID
 
