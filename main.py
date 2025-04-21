@@ -23,6 +23,7 @@ def load_last_verification_msg_id():
     if os.path.exists(LAST_VERIFICATION_MSG_FILE):
         with open(LAST_VERIFICATION_MSG_FILE, "r") as file:
             data = json.load(file)
+            print(f"Loaded last_verification_msg_id: {data.get('last_verification_msg_id')}")  # Debug log
             return data.get("last_verification_msg_id")
     return None
 
@@ -30,6 +31,7 @@ def save_last_verification_msg_id(msg_id):
     """Save the last verification message ID to the file."""
     with open(LAST_VERIFICATION_MSG_FILE, "w") as file:
         json.dump({"last_verification_msg_id": msg_id}, file)
+        print(f"Saved last_verification_msg_id: {msg_id}")  # Debug log
 
 last_verification_msg_id = load_last_verification_msg_id()
 
