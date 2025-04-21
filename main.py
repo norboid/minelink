@@ -131,3 +131,7 @@ async def promptcode(interaction: discord.Interaction, user: discord.User):
         await interaction.response.send_message(f"Verification prompt sent to {user.mention}!", ephemeral=True)
 
 bot.run(TOKEN)
+
+@bot.event
+async def setup_hook():
+    await bot.tree.sync()
