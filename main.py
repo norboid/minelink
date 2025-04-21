@@ -86,7 +86,7 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
         )
         await user.send(embed=embed)
         sent_verification_dms.add(user.id)
-        # Acknowledge the interaction first
+        # Acknowledge the interaction after the DM is successfully sent
         await interaction.response.send_message("✅ Prompt sent.", ephemeral=True)
     except discord.errors.Forbidden:
         # Handle the case where the bot can't send a DM
