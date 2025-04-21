@@ -136,7 +136,7 @@ async def on_message(message: discord.Message):
             # If the message has been processed, prevent further handling
             if hasattr(message, 'processed') and message.processed:
                 return  # Skip if message has already been processed
-            
+
             # Mark the message as processed to prevent further handling
             message.processed = True
 
@@ -148,6 +148,10 @@ async def on_message(message: discord.Message):
             )
             await mod_channel.send(embed=embed)
             await message.channel.send("✅ Code received. A mod will check it soon!")
+
+            # If the code is valid, remove the user from the invalid codes set
+            if message.author.id in sent_invalid_codes:
+                sent_invalid_codes.remove(message.author.id)
 
         else:
             # Avoid sending the invalid code embed twice
