@@ -94,19 +94,20 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
         )
         embed.set_footer(text="Do not share this code with anyone.")
         await user.send(embed=embed)
-        await interaction.response.send_message(f"✅ Prompt sent to {user.mention}'s DMs!", ephemeral=False)
+        await interaction.response.send_message(f"✅ Prompt sent to {user.mention}'s DMs!")  
     except discord.Forbidden:
-        await interaction.response.send_message(f"❌ Couldn't DM {user.mention}.", ephemeral=True)
+        await interaction.response.send_message(f"❌ Couldn't DM {user.mention}.")
 
 @bot.event
 async def on_message(message: discord.Message):
+    # Ensure that the bot doesn't handle messages more than once.
     if message.guild is None and not message.author.bot:
-        # Ensure we don't double-handle the message by using commands
+        # Check if the message is a valid 6-digit code
         if message.content.isdigit() and len(message.content) == 6:
-            # Check if we've already processed the message
+            # If the message has been processed, prevent further handling
             if hasattr(message, 'processed') and message.processed:
                 return  # Skip if message has already been processed
-
+            
             # Mark the message as processed to prevent further handling
             message.processed = True
 
@@ -118,7 +119,6 @@ async def on_message(message: discord.Message):
             )
             await mod_channel.send(embed=embed)
             await message.channel.send("✅ Code received. A mod will check it soon!")
-            return  # Prevent further handling of this message
 
         else:
             embed = discord.Embed(
@@ -127,7 +127,6 @@ async def on_message(message: discord.Message):
                 color=discord.Color.red()
             )
             await message.channel.send(embed=embed)
-            return  # Prevent further handling of this message
 
     # Don't forget to call this so bot can process commands
     await bot.process_commands(message)
