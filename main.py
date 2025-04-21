@@ -1,9 +1,10 @@
+import os
 import discord
 from discord.ext import commands
 from discord import app_commands
 import asyncio
 
-TOKEN = 'DISCORD_TOKEN'
+TOKEN = os.getenv("DISCORD_TOKEN")  # Access the environment variable
 VERIFICATION_CHANNEL_ID = 1362951881827160295  # Replace this with the actual channel ID
 
 # Initialize the bot
