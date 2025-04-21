@@ -135,7 +135,7 @@ async def on_message(message):
 
                 embed = discord.Embed(
                     title="📥 Code Received",
-                    description=f"**User:** {message.author.mention}\n**Code:** {message.content}",
+                    description=f"**User:** {message.author.mention}\n**Code:** `{message.content}`",
                     color=discord.Color.blue()
                 )
 
