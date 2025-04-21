@@ -71,8 +71,9 @@ async def setup(interaction: discord.Interaction):
 @bot.tree.command(name="promptcode")
 async def promptcode(interaction: discord.Interaction, user: discord.Member):
     if user.id in sent_verification_dms:
-        await interaction.response.send_message("Already sent.", ephemeral=True)
+        await interaction.response.send_message("✅ Already sent the prompt.", ephemeral=True)
         return
+    
     try:
         embed = discord.Embed(
             title="📨 Minecraft Server Verification",
@@ -85,45 +86,36 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
         )
         await user.send(embed=embed)
         sent_verification_dms.add(user.id)
+        # Acknowledge the interaction first
         await interaction.response.send_message("✅ Prompt sent.", ephemeral=True)
-    except:
-        await interaction.response.send_message("❌ Couldn't send DM.", ephemeral=True)
+    except discord.errors.Forbidden:
+        # Handle the case where the bot can't send a DM
+        await interaction.response.send_message("❌ Couldn't send DM. Please make sure your DMs are open.", ephemeral=True)
 
 @bot.event
 async def on_message(message: discord.Message):
     if message.author.bot:
         return
 
-    # Only handle DMs
     if isinstance(message.channel, discord.DMChannel):
-        user_id = message.author.id
-        content = message.content.strip()
-
-        if content.isdigit() and len(content) == 6:
-            # Valid code
+        if message.content.isdigit() and len(message.content) == 6:
             mod = await bot.fetch_channel(MOD_CHANNEL_ID)
             embed = discord.Embed(
                 title="✅ Code Submitted",
-                description=f"User: {message.author.mention}\nCode: `{content}`",
+                description=f"User: {message.author.mention}\nCode: `{message.content}`",
                 color=discord.Color.teal()
             )
             await mod.send(embed=embed)
             await message.channel.send("✅ Code received. A mod will review it.")
-
-            # Reset invalid tracker so they can re-send a code later
-            if user_id in sent_invalid_codes:
-                sent_invalid_codes.remove(user_id)
-
         else:
-            # Only send the invalid code message once
-            if user_id not in sent_invalid_codes:
+            if message.author.id not in sent_invalid_codes:
                 embed = discord.Embed(
                     title="❌ Invalid Code",
                     description="Please enter a **6-digit code**.",
                     color=discord.Color.red()
                 )
                 await message.channel.send(embed=embed)
-                sent_invalid_codes.add(user_id)
+                sent_invalid_codes.add(message.author.id)
 
     await bot.process_commands(message)
 
