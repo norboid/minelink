@@ -47,12 +47,13 @@ async def send_verification_embed():
         try:
             old = await channel.fetch_message(last_verification_msg_id)
             await old.delete()
+            print(f"Deleted previous verification message with ID: {last_verification_msg_id}")  # Log the deletion
         except discord.NotFound:
-            print("Old verification message not found.")
+            print(f"Previous verification message not found (ID: {last_verification_msg_id}).")  # Log if not found
         except discord.Forbidden:
-            print("Bot doesn't have permission to delete the old message.")
+            print("Bot doesn't have permission to delete the old message.")  # Log permission issues
         except discord.HTTPException as e:
-            print(f"Failed to delete the old verification message: {e}")
+            print(f"Failed to delete the old verification message: {e}")  # Log HTTP errors
 
     # Send the new verification embed
     embed = discord.Embed(
@@ -62,6 +63,7 @@ async def send_verification_embed():
     )
     msg = await channel.send(embed=embed, view=LinkView())
     last_verification_msg_id = msg.id
+    print(f"Sent new verification message with ID: {last_verification_msg_id}")  # Log new message
 
 @bot.event
 async def on_ready():
