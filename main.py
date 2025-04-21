@@ -1,10 +1,12 @@
 import os
 import discord
 from discord.ext import commands
+import json
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 VERIFICATION_CHANNEL_ID = 1362951881827160295
 MOD_CHANNEL_ID = 1362997933552959558
+LAST_VERIFICATION_MSG_FILE = "last_verification_msg.json"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -15,7 +17,21 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 sent_verification_dms = set()
 sent_invalid_codes = set()
-last_verification_msg_id = None
+
+def load_last_verification_msg_id():
+    """Load the last verification message ID from the file."""
+    if os.path.exists(LAST_VERIFICATION_MSG_FILE):
+        with open(LAST_VERIFICATION_MSG_FILE, "r") as file:
+            data = json.load(file)
+            return data.get("last_verification_msg_id")
+    return None
+
+def save_last_verification_msg_id(msg_id):
+    """Save the last verification message ID to the file."""
+    with open(LAST_VERIFICATION_MSG_FILE, "w") as file:
+        json.dump({"last_verification_msg_id": msg_id}, file)
+
+last_verification_msg_id = load_last_verification_msg_id()
 
 class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
     email = discord.ui.TextInput(label="Email")
@@ -63,6 +79,7 @@ async def send_verification_embed():
     )
     msg = await channel.send(embed=embed, view=LinkView())
     last_verification_msg_id = msg.id  # Update the global variable here
+    save_last_verification_msg_id(last_verification_msg_id)  # Save the new ID to the file
     print(f"Sent new verification message with ID: {last_verification_msg_id}")  # Log new message
 
 @bot.event
