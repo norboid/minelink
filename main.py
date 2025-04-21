@@ -39,7 +39,7 @@ class LinkView(discord.ui.View):
         await interaction.response.send_modal(VerifyModal())
 
 async def send_verification_embed():
-    global last_verification_msg_id
+    global last_verification_msg_id  # Add this line to reference the global variable
     channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
 
     # Delete the old verification embed if it exists
@@ -62,7 +62,7 @@ async def send_verification_embed():
         color=discord.Color.green()
     )
     msg = await channel.send(embed=embed, view=LinkView())
-    last_verification_msg_id = msg.id
+    last_verification_msg_id = msg.id  # Update the global variable here
     print(f"Sent new verification message with ID: {last_verification_msg_id}")  # Log new message
 
 @bot.event
