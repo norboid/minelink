@@ -4,7 +4,7 @@ from discord import app_commands
 import asyncio
 
 TOKEN = 'DISCORD_TOKEN'
-VERIFICATION_CHANNEL_ID = YOUR_VERIFICATION_CHANNEL_ID  # Replace with your actual channel ID
+VERIFICATION_CHANNEL_ID = 1362951881827160295  # Replace this with the actual channel ID
 
 # Initialize the bot
 intents = discord.Intents.default()
