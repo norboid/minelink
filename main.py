@@ -42,15 +42,19 @@ async def send_verification_embed():
     global last_verification_msg_id
     channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
 
-    # Check if there's an old verification embed and delete it
+    # Delete the old verification embed if it exists
     if last_verification_msg_id:
         try:
             old = await channel.fetch_message(last_verification_msg_id)
             await old.delete()
-        except:
-            pass  # Ignore errors if the message doesn’t exist (it could be deleted manually)
+        except discord.NotFound:
+            print("Old verification message not found.")
+        except discord.Forbidden:
+            print("Bot doesn't have permission to delete the old message.")
+        except discord.HTTPException as e:
+            print(f"Failed to delete the old verification message: {e}")
 
-    # Create and send the new verification embed
+    # Send the new verification embed
     embed = discord.Embed(
         title="🔗 Link Your Minecraft Account",
         description="Click the button below to verify.",
