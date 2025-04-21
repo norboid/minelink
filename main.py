@@ -14,9 +14,9 @@ intents.dm_messages = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-# To track if the bot has already sent the verification DM to the user
+# Store verification DM status per user and invalid code attempts
 sent_verification_dms = {}
-sent_invalid_codes = set()  # To track users who entered an invalid code
+sent_invalid_codes = set()
 previous_verification_embed = None  # Variable to store the last verification embed
 
 class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
