@@ -48,6 +48,7 @@ async def on_ready():
     print(f'Logged in as {bot.user.name} (ID: {bot.user.id})')
     print('Bot is ready!')
     try:
+        # Sync commands, including the newly added `/promptcode` command
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} slash commands.")
     except Exception as e:
@@ -55,12 +56,14 @@ async def on_ready():
 
     verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
 
+    # Delete old embeds
     async for message in verification_channel.history(limit=50):
         if message.author == bot.user and message.embeds:
             embed = message.embeds[0]
             if embed.title == "🔗 Link Your Minecraft Account":
                 await message.delete()
 
+    # Send fresh embed
     embed = discord.Embed(
         title="🔗 Link Your Minecraft Account",
         description="Click the **Link Account** button below to start verification.",
@@ -73,6 +76,7 @@ async def on_ready():
 async def setup(interaction: discord.Interaction):
     verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
 
+    # Delete old embeds
     async for message in verification_channel.history(limit=50):
         if message.author == bot.user and message.embeds:
             embed = message.embeds[0]
