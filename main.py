@@ -101,7 +101,15 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
 @bot.event
 async def on_message(message: discord.Message):
     if message.guild is None and not message.author.bot:
+        # Ensure we don't double-handle the message by using commands
         if message.content.isdigit() and len(message.content) == 6:
+            # Check if we've already processed the message
+            if hasattr(message, 'processed') and message.processed:
+                return  # Skip if message has already been processed
+
+            # Mark the message as processed to prevent further handling
+            message.processed = True
+
             mod_channel = await bot.fetch_channel(MOD_CHANNEL_ID)
             embed = discord.Embed(
                 title="✅ Code Submitted",
@@ -110,7 +118,8 @@ async def on_message(message: discord.Message):
             )
             await mod_channel.send(embed=embed)
             await message.channel.send("✅ Code received. A mod will check it soon!")
-            return
+            return  # Prevent further handling of this message
+
         else:
             embed = discord.Embed(
                 title="❌ Invalid Code",
@@ -118,8 +127,9 @@ async def on_message(message: discord.Message):
                 color=discord.Color.red()
             )
             await message.channel.send(embed=embed)
-            return
+            return  # Prevent further handling of this message
 
+    # Don't forget to call this so bot can process commands
     await bot.process_commands(message)
 
 bot.run(TOKEN)
