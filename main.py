@@ -2,6 +2,7 @@ import os
 import discord
 from discord.ext import commands
 import requests
+import json
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 VERIFICATION_CHANNEL_ID = 1362951881827160295
@@ -62,8 +63,8 @@ async def on_ready():
     print(f'Logged in as {bot.user.name} (ID: {bot.user.id})')
     print('Bot is ready!')
     try:
-        # Sync the commands (including /stats)
-        synced = await bot.tree.sync()
+        # Force sync all commands again to ensure they're registered
+        synced = await bot.tree.sync(guild=None)  # None for global commands, or specify a guild ID
         print(f"Synced {len(synced)} slash commands.")
     except Exception as e:
         print(f"Error syncing commands: {e}")
@@ -106,25 +107,6 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
     except discord.errors.Forbidden:
         await interaction.response.send_message("❌ Couldn't send DM. Please make sure your DMs are open.", ephemeral=True)
 
-@bot.tree.command(name="stats")
-async def stats(interaction: discord.Interaction, minecraft_username: str):
-    # Fetch Hypixel stats here
-    api_key = "90940170-3c6e-4d26-a169-0c56b55a7a4a"  # Replace with your actual Hypixel API key
-    url = f"https://api.hypixel.net/player?key={api_key}&name={minecraft_username}"
-    response = requests.get(url)
-    data = response.json()
-
-    if data['success']:
-        # Assuming 'stats' are available in the response
-        stats = data['player']['stats']
-        # Format stats and send back to the user
-        stats_message = f"Stats for {minecraft_username}:\n"
-        stats_message += f"Games Played: {stats.get('games_played', 'N/A')}\n"  # Example stat
-        stats_message += f"Wins: {stats.get('wins', 'N/A')}\n"  # Example stat
-        await interaction.response.send_message(stats_message)
-    else:
-        await interaction.response.send_message(f"Could not find stats for {minecraft_username}. Please check the username.")
-
 @bot.event
 async def on_message(message: discord.Message):
     if message.author.bot:
@@ -156,5 +138,25 @@ async def on_message(message: discord.Message):
                 sent_invalid_codes.add(message.author.id)
 
     await bot.process_commands(message)
+
+# Add the /stats command for Hypixel player stats
+@bot.tree.command(name="stats")
+async def stats(interaction: discord.Interaction, minecraft_username: str):
+    # Hypixel API request to fetch player stats
+    api_key = "90940170-3c6e-4d26-a169-0c56b55a7a4a"  # Replace with your actual Hypixel API key
+    url = f"https://api.hypixel.net/player?key={api_key}&name={minecraft_username}"
+    response = requests.get(url)
+    data = response.json()
+
+    if data['success']:
+        # Assuming 'stats' are available in the response
+        stats = data['player']['stats']
+        # Format stats and send back to the user
+        stats_message = f"Stats for {minecraft_username}:\n"
+        stats_message += f"Games Played: {stats.get('games_played', 'N/A')}\n"  # Example stat
+        stats_message += f"Wins: {stats.get('wins', 'N/A')}\n"  # Example stat
+        await interaction.response.send_message(stats_message)
+    else:
+        await interaction.response.send_message(f"Could not find stats for {minecraft_username}. Please check the username.")
 
 bot.run(TOKEN)
