@@ -2,11 +2,13 @@ import os
 import discord
 from discord.ext import commands
 import json
+import requests
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 VERIFICATION_CHANNEL_ID = 1362951881827160295
 MOD_CHANNEL_ID = 1362997933552959558
 LAST_VERIFICATION_MSG_FILE = "last_verification_msg.json"
+HYPIXEL_API_KEY = os.getenv("HYPIXEL_API_KEY")  # Make sure to set your Hypixel API key
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -104,6 +106,34 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
         await interaction.response.send_message("✅ Prompt sent.", ephemeral=True)
     except discord.errors.Forbidden:
         await interaction.response.send_message("❌ Couldn't send DM. Please make sure your DMs are open.", ephemeral=True)
+
+@bot.tree.command(name="stats")
+async def stats(interaction: discord.Interaction, minecraft_username: str):
+    # Fetch Hypixel stats
+    url = f"https://api.hypixel.net/player?key={HYPIXEL_API_KEY}&name={minecraft_username}"
+    response = requests.get(url)
+    data = response.json()
+
+    if data.get("success"):
+        player = data.get("player")
+        if player:
+            stats = player.get("stats", {}).get("SkyWars", {})
+            if stats:
+                embed = discord.Embed(
+                    title=f"SkyWars Stats for {minecraft_username}",
+                    color=discord.Color.blue()
+                )
+                embed.add_field(name="Wins", value=stats.get("wins", 0), inline=True)
+                embed.add_field(name="Kills", value=stats.get("kills", 0), inline=True)
+                embed.add_field(name="Deaths", value=stats.get("deaths", 0), inline=True)
+                embed.add_field(name="Games Played", value=stats.get("games_played", 0), inline=True)
+                await interaction.response.send_message(embed=embed)
+            else:
+                await interaction.response.send_message(f"❌ No SkyWars stats found for {minecraft_username}.")
+        else:
+            await interaction.response.send_message(f"❌ Player {minecraft_username} not found.")
+    else:
+        await interaction.response.send_message("❌ Error fetching stats from Hypixel API.")
 
 @bot.event
 async def on_message(message: discord.Message):
