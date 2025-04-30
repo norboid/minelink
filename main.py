@@ -2,14 +2,11 @@ import os
 import discord
 from discord.ext import commands
 import requests
-import json
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 VERIFICATION_CHANNEL_ID = 1362951881827160295
 MOD_CHANNEL_ID = 1362997933552959558
 LAST_VERIFICATION_MSG_FILE = "last_verification_msg.json"
-
-API_KEY = "HYPIXEL_API_KEY"  # Add your Hypixel API key here
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -65,12 +62,12 @@ async def on_ready():
     print(f'Logged in as {bot.user.name} (ID: {bot.user.id})')
     print('Bot is ready!')
     try:
-        # Sync the commands (including the /stats command)
+        # Sync the commands (including /stats)
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} slash commands.")
     except Exception as e:
         print(f"Error syncing commands: {e}")
-        
+
     verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
 
     async for message in verification_channel.history(limit=50):
@@ -109,6 +106,25 @@ async def promptcode(interaction: discord.Interaction, user: discord.Member):
     except discord.errors.Forbidden:
         await interaction.response.send_message("❌ Couldn't send DM. Please make sure your DMs are open.", ephemeral=True)
 
+@bot.tree.command(name="stats")
+async def stats(interaction: discord.Interaction, minecraft_username: str):
+    # Fetch Hypixel stats here
+    api_key = "90940170-3c6e-4d26-a169-0c56b55a7a4a"  # Replace with your actual Hypixel API key
+    url = f"https://api.hypixel.net/player?key={api_key}&name={minecraft_username}"
+    response = requests.get(url)
+    data = response.json()
+
+    if data['success']:
+        # Assuming 'stats' are available in the response
+        stats = data['player']['stats']
+        # Format stats and send back to the user
+        stats_message = f"Stats for {minecraft_username}:\n"
+        stats_message += f"Games Played: {stats.get('games_played', 'N/A')}\n"  # Example stat
+        stats_message += f"Wins: {stats.get('wins', 'N/A')}\n"  # Example stat
+        await interaction.response.send_message(stats_message)
+    else:
+        await interaction.response.send_message(f"Could not find stats for {minecraft_username}. Please check the username.")
+
 @bot.event
 async def on_message(message: discord.Message):
     if message.author.bot:
@@ -140,25 +156,5 @@ async def on_message(message: discord.Message):
                 sent_invalid_codes.add(message.author.id)
 
     await bot.process_commands(message)
-
-@bot.tree.command(name="stats")
-async def stats(interaction: discord.Interaction, minecraft_username: str):
-    def get_hypixel_stats(minecraft_username):
-        url = f"https://api.hypixel.net/player?key={API_KEY}&name={minecraft_username}"
-        response = requests.get(url)
-        data = response.json()
-
-        if data['success']:
-            player = data['player']
-            skywars_level = player['achievements']['skywars_level']
-            return f"SkyWars Level: {skywars_level}"
-        else:
-            return "Error fetching data or player not found."
-
-    try:
-        stats = get_hypixel_stats(minecraft_username)
-        await interaction.response.send_message(f"Stats for {minecraft_username}:\n{stats}")
-    except Exception as e:
-        await interaction.response.send_message(f"An error occurred while fetching stats: {e}")
 
 bot.run(TOKEN)
