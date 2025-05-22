@@ -1,162 +1,108 @@
-import os
 import discord
 from discord.ext import commands
-import requests
 import json
+import os
 
-TOKEN = os.getenv("DISCORD_TOKEN")
-VERIFICATION_CHANNEL_ID = 1362951881827160295
-MOD_CHANNEL_ID = 1362997933552959558
-LAST_VERIFICATION_MSG_FILE = "last_verification_msg.json"
+TOKEN = 'YOUR_DISCORD_BOT_TOKEN'  # Put your bot token here
 
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-intents.dm_messages = True
+DATA_FILE = 'fruit_stock.json'
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+if os.path.exists(DATA_FILE):
+    with open(DATA_FILE, 'r') as f:
+        fruit_stock = json.load(f)
+else:
+    fruit_stock = {}
 
-sent_invalid_codes = set()
+bot = commands.Bot(command_prefix='!')
 
-def load_last_verification_msg_id():
-    if os.path.exists(LAST_VERIFICATION_MSG_FILE):
-        with open(LAST_VERIFICATION_MSG_FILE, "r") as file:
-            data = json.load(file)
-            print(f"Loaded last_verification_msg_id: {data.get('last_verification_msg_id')}")
-            return data.get("last_verification_msg_id")
-    return None
-
-def save_last_verification_msg_id(msg_id):
-    with open(LAST_VERIFICATION_MSG_FILE, "w") as file:
-        json.dump({"last_verification_msg_id": msg_id}, file)
-        print(f"Saved last_verification_msg_id: {msg_id}")
-
-last_verification_msg_id = load_last_verification_msg_id()
-
-class VerifyModal(discord.ui.Modal, title="Link Your Minecraft Account"):
-    email = discord.ui.TextInput(label="Email")
-    ign = discord.ui.TextInput(label="IGN")
-
-    async def on_submit(self, interaction: discord.Interaction):
-        log = await bot.fetch_channel(MOD_CHANNEL_ID)
-        embed = discord.Embed(title="New Verification", color=discord.Color.orange())
-        embed.add_field(name="User", value=interaction.user.mention, inline=False)
-        embed.add_field(name="Email", value=self.email.value, inline=False)
-        embed.add_field(name="IGN", value=self.ign.value, inline=False)
-        await log.send(embed=embed)
-        await interaction.response.send_message("✅ Submitted!", ephemeral=True)
-
-class LinkView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-
-    @discord.ui.button(label="Link Account", style=discord.ButtonStyle.primary)
-    async def link(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(VerifyModal())
-
-async def send_verification_embed():
-    global last_verification_msg_id
-    channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
+def save_stock():
+    with open(DATA_FILE, 'w') as f:
+        json.dump(fruit_stock, f, indent=4)
 
 @bot.event
 async def on_ready():
-    print(f'Logged in as {bot.user.name} (ID: {bot.user.id})')
-    print('Bot is ready!')
-    try:
-        # Force sync all commands again to ensure they're registered
-        synced = await bot.tree.sync(guild=None)  # None for global commands, or specify a guild ID
-        print(f"Synced {len(synced)} slash commands.")
-    except Exception as e:
-        print(f"Error syncing commands: {e}")
+    print(f'Logged in as {bot.user.name}')
 
-    verification_channel = await bot.fetch_channel(VERIFICATION_CHANNEL_ID)
+def create_embed(title, description, color=0x2ecc71):
+    return discord.Embed(title=title, description=description, color=color)
 
-    async for message in verification_channel.history(limit=50):
-        if message.author == bot.user and message.embeds:
-            embed = message.embeds[0]
-            if embed.title == "🔗 Link Your Minecraft Account":
-                await message.delete()
+@bot.command(name='addfruit')
+async def add_fruit(ctx, fruit: str, quantity: int):
+    fruit = fruit.lower()
+    if fruit in fruit_stock:
+        fruit_stock[fruit] += quantity
+    else:
+        fruit_stock[fruit] = quantity
+    save_stock()
 
-    embed = discord.Embed(
-        title="🔗 Link Your Minecraft Account",
-        description="Click the **Link Account** button below to start verification.",
-        color=discord.Color.green()
+    embed = create_embed(
+        title="Fruit Added 🍎",
+        description=f"Added **{quantity}** {fruit}(s).\nNew total: **{fruit_stock[fruit]}**"
     )
-    embed.set_footer(text="This is an automated message.")
-    await verification_channel.send(embed=embed, view=LinkView())
+    await ctx.send(embed=embed)
 
-@bot.tree.command(name="setup")
-async def setup(interaction: discord.Interaction):
-    await send_verification_embed()
-    await interaction.response.send_message("✅ Sent!", ephemeral=True)
-
-@bot.tree.command(name="promptcode")
-async def promptcode(interaction: discord.Interaction, user: discord.Member):
-    try:
-        embed = discord.Embed(
-            title="📨 Minecraft Server Verification",
-            description=( 
-                "We've sent a 6-digit code to your email linked to Minecraft.\n\n"
-                "Reply to this DM with the code to complete verification.\n\n"
-                "🔒 Your info is private. Don't share your code."
-            ),
-            color=discord.Color.blue()
+@bot.command(name='removefruit')
+async def remove_fruit(ctx, fruit: str, quantity: int):
+    fruit = fruit.lower()
+    if fruit not in fruit_stock:
+        embed = create_embed(
+            title="Error ❌",
+            description=f"No **{fruit}** found in stock.",
+            color=0xe74c3c
         )
-        await user.send(embed=embed)
-        await interaction.response.send_message("✅ Prompt sent.", ephemeral=True)
-    except discord.errors.Forbidden:
-        await interaction.response.send_message("❌ Couldn't send DM. Please make sure your DMs are open.", ephemeral=True)
-
-@bot.event
-async def on_message(message: discord.Message):
-    if message.author.bot:
+        await ctx.send(embed=embed)
         return
 
-    if isinstance(message.channel, discord.DMChannel):
-        if message.content.isdigit() and len(message.content) == 6:
-            mod = await bot.fetch_channel(MOD_CHANNEL_ID)
-            embed = discord.Embed(
-                title="✅ Code Submitted",
-                description=f"User: {message.author.mention}\nCode: {message.content}",
-                color=discord.Color.teal()
-            )
-            await mod.send(embed=embed)
-            confirm_embed = discord.Embed(
-                title="✅ Code Received",
-                description="A mod will review your code shortly.",
-                color=discord.Color.green()
-            )
-            await message.channel.send(embed=confirm_embed)
-        else:
-            if message.author.id not in sent_invalid_codes:
-                embed = discord.Embed(
-                    title="❌ Invalid Code",
-                    description="Please enter a **6-digit code**.",
-                    color=discord.Color.red()
-                )
-                await message.channel.send(embed=embed)
-                sent_invalid_codes.add(message.author.id)
+    if fruit_stock[fruit] < quantity:
+        embed = create_embed(
+            title="Error ❌",
+            description=f"Not enough **{fruit}** to remove. You have **{fruit_stock[fruit]}**.",
+            color=0xe74c3c
+        )
+        await ctx.send(embed=embed)
+        return
 
-    await bot.process_commands(message)
+    fruit_stock[fruit] -= quantity
+    if fruit_stock[fruit] == 0:
+        del fruit_stock[fruit]
+    save_stock()
 
-# Add the /stats command for Hypixel player stats
-@bot.tree.command(name="stats")
-async def stats(interaction: discord.Interaction, minecraft_username: str):
-    # Hypixel API request to fetch player stats
-    api_key = "90940170-3c6e-4d26-a169-0c56b55a7a4a"  # Replace with your actual Hypixel API key
-    url = f"https://api.hypixel.net/player?key={api_key}&name={minecraft_username}"
-    response = requests.get(url)
-    data = response.json()
+    embed = create_embed(
+        title="Fruit Removed 🍏",
+        description=f"Removed **{quantity}** {fruit}(s).\nNew total: **{fruit_stock.get(fruit, 0)}**"
+    )
+    await ctx.send(embed=embed)
 
-    if data['success']:
-        # Assuming 'stats' are available in the response
-        stats = data['player']['stats']
-        # Format stats and send back to the user
-        stats_message = f"Stats for {minecraft_username}:\n"
-        stats_message += f"Games Played: {stats.get('games_played', 'N/A')}\n"  # Example stat
-        stats_message += f"Wins: {stats.get('wins', 'N/A')}\n"  # Example stat
-        await interaction.response.send_message(stats_message)
-    else:
-        await interaction.response.send_message(f"Could not find stats for {minecraft_username}. Please check the username.")
+@bot.command(name='stock')
+async def stock(ctx):
+    if not fruit_stock:
+        embed = create_embed(
+            title="Fruit Stock",
+            description="Your fruit stock is empty.",
+            color=0xf1c40f
+        )
+        await ctx.send(embed=embed)
+        return
+
+    description = ""
+    for fruit, qty in fruit_stock.items():
+        description += f"**{fruit.capitalize()}**: {qty}\n"
+
+    embed = create_embed(
+        title="Current Fruit Stock 🍇",
+        description=description
+    )
+    await ctx.send(embed=embed)
+
+@bot.command(name='resetstock')
+async def reset_stock(ctx):
+    fruit_stock.clear()
+    save_stock()
+    embed = create_embed(
+        title="Fruit Stock Reset",
+        description="Your fruit stock has been cleared.",
+        color=0xe67e22
+    )
+    await ctx.send(embed=embed)
 
 bot.run(TOKEN)
