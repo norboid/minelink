@@ -3,7 +3,7 @@ from discord.ext import commands
 import json
 import os
 
-TOKEN = 'DISCORD_TOKEN'  # Put your bot token here
+TOKEN = os.getenv('DISCORD_TOKEN')
 
 DATA_FILE = 'fruit_stock.json'
 
