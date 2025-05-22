@@ -32,4 +32,4 @@ async def stock(ctx):
     for chunk in [message[i:i+1900] for i in range(0, len(message), 1900)]:
         await ctx.send(chunk)
 
-bot.run('YOUR_BOT_TOKEN')
+bot.run('BOT_TOKEN')
