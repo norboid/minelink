@@ -1,1 +1,22 @@
+[
+  { "traits": ["Celestial", "Wet", "Gold"], "value": "6.7B" },
+  { "traits": ["Frozen", "Shocked"], "value": "350M" },
+  { "traits": ["Celestial", "Wet", "Shocked", "Gold"], "value": "7.6B" },
+  { "traits": ["Celestial", "Frozen"], "value": "350M" },
+  { "traits": ["Celestial", "Moonlit", "Frozen", "Shocked"], "value": "650M" },
+  { "traits": ["Frozen", "Shocked", "Gold"], "value": "6.8B" },
+  { "traits": ["Celestial", "Frozen", "Shocked", "Gold"], "value": "4.5B" },
+  { "traits": ["Celestial", "Frozen", "Shocked", "Gold"], "value": "10.9B" },
+  { "traits": ["Celestial", "Frozen", "Shocked", "Gold"], "value": "6.9B" },
+  { "traits": ["Bloodlit", "Celestial", "Moonlit", "Wet"], "value": "500M" },
+  { "traits": ["Celestial", "Frozen", "Shocked"], "value": "487M" },
+  { "traits": ["Celestial", "Frozen", "Shocked"], "value": "394M" },
+  { "traits": ["Celestial", "Wet", "Shocked"], "value": "600M" },
+  { "traits": ["Celestial", "Frozen", "Shocked", "Gold"], "value": "10.9B" },
+  { "traits": ["Celestial", "Frozen"], "value": "351M" },
+  { "traits": ["Celestial", "Frozen", "Shocked", "Gold"], "value": "10.9B" },
+  { "traits": ["Celestial", "Frozen", "Shocked", "Gold"], "value": "4.5B" },
+  { "traits": ["Celestial", "Moonlit", "Frozen", "Shocked"], "value": "4.4B" },
+  { "traits": ["Celestial", "Frozen", "Shocked"], "value": "450M" }
+]
 
